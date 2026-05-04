@@ -1,73 +1,80 @@
-// Anime Offis Ads SDK - v1.1.0
-// Hosting sugerido: https://cdn.animeoffis.com/sdk.js
+// Anime Offis Ads SDK - Firebase Edition
 (function() {
     const scriptSrc = document.currentScript.src;
     const urlParams = new URLSearchParams(scriptSrc.split('?')[1]);
     const publisherID = urlParams.get('id');
+
+    // IMPORTAMOS FIREBASE DINÁMICAMENTE DENTRO DEL SDK
+    const firebaseScript = document.createElement('script');
+    firebaseScript.type = 'module';
+    firebaseScript.innerHTML = `
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAnSRgfkxpyAJG4qN-vIlTqXArCEeD6oLc",
+            authDomain: "ads-offis.firebaseapp.com",
+            projectId: "ads-offis",
+            storageBucket: "ads-offis.firebasestorage.app",
+            messagingSenderId: "390082810870",
+            appId: "1:390082810870:web:3be23e5fc5f516567eadd7"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Función global para que el SDK la llame
+        window.registrarVistaAds = async function(id) {
+            try {
+                const partnerRef = doc(db, "partners", id);
+                await updateDoc(partnerRef, {
+                    views: increment(1) // SUMA +1 A LAS VISTAS EN FIREBASE
+                });
+                console.log("[Anime Offis] Monetización registrada +$0.20");
+            } catch (e) {
+                console.error("[Anime Offis] Error al registrar monetización:", e);
+            }
+        };
+    `;
+    document.head.appendChild(firebaseScript);
 
     window.AnimeOffisSDK = {
         esAnuncio: false,
         listaAds: "https://vdaf.animeoffis.com/ads/lista.json",
 
         async solicitarAnuncio(playerElementId) {
-            if (!publisherID) {
-                console.error("[Anime Offis] Error: Falta Publisher ID.");
-                return;
-            }
-
             const player = videojs(playerElementId);
             const adLabel = document.getElementById('ad-label');
 
             try {
-                // 1. Obtener tu lista de anuncios JSON
                 const response = await fetch(this.listaAds);
                 const anuncios = await response.json();
-
-                // 2. Selección aleatoria
                 const anuncioElegido = anuncios[Math.floor(Math.random() * anuncios.length)];
-                
-                // 3. Preparar transición
+
                 this.esAnuncio = true;
                 const sourceOriginal = player.currentSrc();
 
-                // 4. Cargar anuncio
                 player.src({ type: 'video/mp4', src: anuncioElegido.url });
                 if (adLabel) adLabel.style.display = 'block';
 
-                // Evitar que el usuario adelante el anuncio
-                player.on('seeking', () => {
-                    if (this.esAnuncio) {
-                        const currentTime = player.currentTime();
-                        if (currentTime > player.bufferedEnd()) {
-                            player.currentTime(player.bufferedEnd() || 0);
-                        }
-                    }
-                });
-
-                // 5. Evento al finalizar el anuncio
-                player.one('ended', () => {
+                player.one('ended', async () => {
                     this.esAnuncio = false;
                     if (adLabel) adLabel.style.display = 'none';
-                    
-                    // Volver al contenido original (capítulo de anime)
+
+                    // --- LLAMADA A FIREBASE ---
+                    if (window.registrarVistaAds && publisherID) {
+                        await window.registrarVistaAds(publisherID);
+                    }
+
                     player.src({ type: 'video/mp4', src: sourceOriginal });
                     player.play();
-
-                    // Registrar impresión (Análisis futuro)
-                    this.registrarImpresion(publisherID, anuncioElegido.id);
                 });
 
                 player.play();
-
             } catch (e) {
-                console.error("[Anime Offis] Error al cargar anuncios, saltando al contenido.");
                 this.esAnuncio = false;
+                console.error("Error SDK:", e);
             }
-        },
-
-        registrarImpresion(pubId, adId) {
-            // Aquí enviarías los datos a tu Cloudflare Worker de análisis
-            console.log(`[Analytics] Registro: Pub:${pubId} | Ad:${adId}`);
         }
     };
 })();
