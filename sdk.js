@@ -58,7 +58,7 @@
 
     window.AnimeOffisSDK = {
         esAnuncio: false,
-        listaAds: "https://vdaf.animeoffis.com/ads/lista.json", // Tu CDN de anuncios
+        listaAds: "https://anime-offisvd.pages.dev/ads/lista.json", // Tu CDN de anuncios
 
         async solicitarAnuncio(playerElementId) {
             const contenedor = document.getElementById(playerElementId);
