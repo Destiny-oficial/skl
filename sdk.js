@@ -1,55 +1,38 @@
-// Anime Offis Ads SDK - Universal Multi-Format & Multi-Tracking Edition
+// Anime Offis Ads SDK - Edición Privada (Uso Exclusivo)
 (function(window, document) {
-    const scriptSrc = document.currentScript ? document.currentScript.src : '';
-    const urlParams = new URLSearchParams(scriptSrc.split('?')[1] || '');
-    
-    // Captura dinámicamente la clave del partner desde la URL (ej: AO-882065 o AO-82939)
-    const publisherID = urlParams.get('id') || 'AO-82939'; 
-
     const CONFIG = {
         projectId: "ads-offis",
         databaseURL: "https://ads-offis-default-rtdb.firebaseio.com",
         listaAds: "https://anime-offisvd.pages.dev/ads/lista.json" // Tu CDN de anuncios
     };
 
-    // MOTOR DE MONETIZACIÓN Y SEGUIMIENTO (Sin dependencias externas)
+    // SISTEMA DE SEGUIMIENTO INTERNO
     const Tracker = {
-        // Tracker Firestore REST API (Carga instantánea)
-        async _incrementFirestore(collection, docId, field) {
-            if (!docId) return;
-            try {
-                // Usamos la API REST de Firestore para no depender de scripts pesados
-                const url = `https://firestore.googleapis.com/v1/projects/${CONFIG.projectId}/databases/(default)/documents/${collection}/${docId}?updateMask.fieldPaths=${field}`;
-                
-                // Primero leemos el valor actual o incrementamos vía Realtime DB
-                const rtdbUrl = `${CONFIG.databaseURL}/analytics/${collection}/${docId}/${field}.json`;
-                
-                // Transacción ultra-rápida en Realtime DB
-                fetch(rtdbUrl)
-                    .then(res => res.json())
-                    .then(current => {
-                        const nextValue = (current || 0) + 1;
-                        fetch(rtdbUrl, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(nextValue)
-                        });
-                    }).catch(()=>{});
-
-            } catch (e) { console.error("[Anime Offis Track Error]", e); }
+        _increment(adId, field) {
+            if (!adId) return;
+            const rtdbUrl = `${CONFIG.databaseURL}/analytics/metricas_ads/${adId}/${field}.json`;
+            
+            fetch(rtdbUrl)
+                .then(res => res.json())
+                .then(current => {
+                    const nextValue = (current || 0) + 1;
+                    fetch(rtdbUrl, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(nextValue)
+                    });
+                }).catch(() => {});
         },
 
-        registrarVistaAd(adId) { this._incrementFirestore('metricas_ads', adId, 'vistas'); },
-        registrarClicAd(adId) { this._incrementFirestore('metricas_ads', adId, 'clics'); },
-        registrarPartner(pubId) { this._incrementFirestore('partners', pubId, 'views'); }
+        registrarVista(adId) { this._increment(adId, 'vistas'); },
+        registrarClic(adId) { this._increment(adId, 'clics'); }
     };
 
-    // EL SDK UNIFICADO
+    // SDK PRINCIPAL
     window.AnimeOffisSDK = {
         esAnuncio: false,
-        publisherID: publisherID,
 
-        // Obtener lista de anuncios filtrada por formato
+        // Obtener anuncio filtrado por formato
         async _obtenerAnuncio(formatoDeseado = null) {
             try {
                 const response = await fetch(CONFIG.listaAds);
@@ -65,18 +48,15 @@
                 return {
                     id: elegido.id || "ad_desconocido",
                     url: elegido.url || elegido.imagen_url,
-                    link: elegido.link || elegido.url_destino || "#",
-                    formato: elegido.formato || "video"
+                    link: elegido.link || elegido.url_destino || "#"
                 };
             } catch (e) {
-                console.error("[Anime Offis SDK] Error cargando lista de anuncios JSON:", e);
+                console.error("[Anime Offis SDK] Error al cargar lista.json:", e);
                 return null;
             }
         },
 
-        // ==========================================
-        // 1. ANUNCIO DE VIDEO PRE-ROLL (TU MÉTODO ORIGINAL MEJORADO)
-        // ==========================================
+        // 1. VIDEO PRE-ROLL (Para el reproductor)
         async solicitarAnuncio(playerElementId) {
             const contenedor = document.getElementById(playerElementId);
             if (!contenedor) return;
@@ -100,9 +80,9 @@
                 textDecoration: 'none', fontWeight: 'bold', fontFamily: 'sans-serif'
             });
 
-            visitBtn.onclick = () => Tracker.registrarClicAd(elegido.id);
+            visitBtn.onclick = () => Tracker.registrarClic(elegido.id);
 
-            // Botón Omitir
+            // Botón Omitir Anuncio
             let skipBtn = document.createElement('button');
             skipBtn.innerText = "Omitir Anuncio ►";
             Object.assign(skipBtn.style, {
@@ -121,11 +101,10 @@
                 visitBtn.remove();
                 skipBtn.remove();
 
-                // Doble rastreo
-                Tracker.registrarVistaAd(elegido.id);
-                Tracker.registrarPartner(this.publisherID);
+                // Registra la vista del anuncio
+                Tracker.registrarVista(elegido.id);
 
-                // Volver al Anime
+                // Reanudar el video original
                 videoElement.src = sourceOriginal;
                 videoElement.load();
                 videoElement.play();
@@ -145,9 +124,7 @@
             videoElement.play();
         },
 
-        // ==========================================
-        // 2. NUEVO: BANNERS (BARRAS Y PUBLICACIONES)
-        // ==========================================
+        // 2. BANNERS (Fijos / Dentro de publicaciones)
         async renderBanner(containerId, formato = 'banner') {
             const container = document.getElementById(containerId);
             if (!container) return;
@@ -156,26 +133,18 @@
             if (!ad) return;
 
             container.innerHTML = `
-                <div style="text-align:center; margin: 10px 0; position:relative;">
+                <div style="text-align:center; margin: 10px 0;">
                     <a href="${ad.link}" target="_blank" rel="noopener sponsored" id="ao-banner-${ad.id}">
-                        <img src="${ad.url}" alt="Publicidad" style="max-width:100%; height:auto; border-radius:6px; border:1px solid #00aaff33;" />
+                        <img src="${ad.url}" style="max-width:100%; height:auto; border-radius:6px; border:1px solid #00aaff33;" />
                     </a>
                 </div>
             `;
 
-            // Registrar Vista + Partner
-            Tracker.registrarVistaAd(ad.id);
-            Tracker.registrarPartner(this.publisherID);
-
-            // Registrar Clic
-            document.getElementById(`ao-banner-${ad.id}`).addEventListener('click', () => {
-                Tracker.registrarClicAd(ad.id);
-            });
+            Tracker.registrarVista(ad.id);
+            document.getElementById(`ao-banner-${ad.id}`).addEventListener('click', () => Tracker.registrarClic(ad.id));
         },
 
-        // ==========================================
-        // 3. NUEVO: OVERLAY EN VIDEO (Flotante sobre el player)
-        // ==========================================
+        // 3. OVERLAY EN VIDEO (Barra flotante sobre el video)
         async renderOverlay(videoContainerId) {
             const container = document.getElementById(videoContainerId);
             if (!container) return;
@@ -199,20 +168,16 @@
             `;
 
             container.appendChild(overlay);
+            Tracker.registrarVista(ad.id);
 
-            Tracker.registrarVistaAd(ad.id);
-            Tracker.registrarPartner(this.publisherID);
-
-            document.getElementById(`ao-overlay-${ad.id}`).addEventListener('click', () => Tracker.registrarClicAd(ad.id));
+            document.getElementById(`ao-overlay-${ad.id}`).addEventListener('click', () => Tracker.registrarClic(ad.id));
             document.getElementById(`close-ao-${ad.id}`).addEventListener('click', (e) => {
                 e.stopPropagation();
                 overlay.remove();
             });
         },
 
-        // ==========================================
-        // 4. NUEVO: POPUP / VENTANA EMERGENTE
-        // ==========================================
+        // 4. POPUP EMERGENTE
         async renderPopup() {
             const ad = await this._obtenerAnuncio('popup');
             if (!ad) return;
@@ -234,11 +199,9 @@
             `;
 
             document.body.appendChild(modal);
+            Tracker.registrarVista(ad.id);
 
-            Tracker.registrarVistaAd(ad.id);
-            Tracker.registrarPartner(this.publisherID);
-
-            document.getElementById(`ao-pop-${ad.id}`).addEventListener('click', () => Tracker.registrarClicAd(ad.id));
+            document.getElementById(`ao-pop-${ad.id}`).addEventListener('click', () => Tracker.registrarClic(ad.id));
             document.getElementById(`close-pop-${ad.id}`).addEventListener('click', () => modal.remove());
         }
     };
