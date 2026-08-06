@@ -1,6 +1,6 @@
 /**
  * 📢 Anime Offis Ads SDK
- * Gestor de campañas Pre-Roll e impresiones
+ * Gestor de campañas Pre-Roll con Respaldo Visual (Fallback) e impresiones
  */
 (function (window) {
   'use strict';
@@ -8,10 +8,10 @@
   // Configuración por defecto
   const CONFIG = {
     firebaseDbUrl: 'https://ads-offis-default-rtdb.firebaseio.com/analytics/metricas_ads',
-    // Video publicitario por defecto si no se especifica una lista
     defaultAd: {
       id: 'ad_preroll_default',
       title: 'Patrocinado por Anime Offis',
+      description: 'Descubre el catálogo y las novedades de la comunidad.',
       videoUrl: 'https://anime-offisvd.pages.dev/ads/anuncio2.mp4',
       targetUrl: 'https://alianza.animeoffis.com',
       skipDelay: 7 // Segundos antes de mostrar botón Omitir
@@ -44,7 +44,6 @@
           body: JSON.stringify(vistasActuales + 1)
         });
       } catch (err) {
-        // Capturamos el error (401 u otros) para que la publicidad siga funcionando
         console.warn('AnimeOffisSDK (Analytics Warning):', err.message);
       }
     },
@@ -72,7 +71,7 @@
           return resolve();
         }
 
-        // Registrar analítica sin bloquear la UI
+        // Registrar analítica silenciosa
         this._registrarVista(adData.id);
 
         // Prevenir duplicados de overlays
@@ -86,7 +85,7 @@
           position: absolute;
           top: 0; left: 0; width: 100%; height: 100%;
           z-index: 9999;
-          background: #000;
+          background: #05070a;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -95,17 +94,25 @@
           font-family: 'Segoe UI', system-ui, sans-serif;
         `;
 
-        // 2. Estructura HTML Interna del Ad
+        // 2. Estructura HTML Interna del Ad (Video + Tarjeta de Respaldo)
         overlay.innerHTML = `
+          <!-- Elemento de Video Publicitario -->
           <video id="animeoffis-ad-video" src="${adData.videoUrl}" autoplay playsinline style="width:100%; height:100%; object-fit:contain;"></video>
-          
-          <!-- Badge Publicitario -->
-          <div style="position:absolute; top:15px; left:15px; background:rgba(5,7,10,0.75); border:1px solid rgba(0,170,255,0.4); padding:6px 12px; border-radius:20px; font-size:12px; color:#00aaff; backdrop-filter:blur(10px); z-index:10001; font-weight:600;">
+
+          <!-- Tarjeta de Respaldo Visual (se activa si el video falla) -->
+          <div id="animeoffis-ad-fallback" style="display:none; text-align:center; padding:30px; border-radius:24px; background:rgba(255,255,255,0.03); border:1px solid rgba(0,170,255,0.3); backdrop-filter:blur(15px); max-width:80%; box-shadow:0 10px 30px rgba(0,0,0,0.8);">
+            <div style="font-size:40px; margin-bottom:10px;">📢</div>
+            <h3 style="margin:0 0 10px 0; color:#00aaff; font-size:1.2rem;">${adData.title}</h3>
+            <p style="margin:0 0 15px 0; color:#94a3b8; font-size:0.85rem; line-height:1.4;">${adData.description}</p>
+          </div>
+
+          <!-- Badge Publicitario Superior -->
+          <div style="position:absolute; top:15px; left:15px; background:rgba(5,7,10,0.85); border:1px solid rgba(0,170,255,0.4); padding:6px 12px; border-radius:20px; font-size:12px; color:#00aaff; backdrop-filter:blur(10px); z-index:10001; font-weight:600;">
             Anuncio • ${adData.title}
           </div>
 
           <!-- Botón Visitar Sitio -->
-          <a href="${adData.targetUrl}" target="_blank" rel="noopener" style="position:absolute; bottom:20px; left:20px; background:rgba(0,170,255,0.2); border:1px solid #00aaff; color:#fff; text-decoration:none; padding:8px 16px; border-radius:12px; font-size:13px; font-weight:600; backdrop-filter:blur(10px); z-index:10001; transition:0.2s;">
+          <a href="${adData.targetUrl}" target="_blank" rel="noopener" style="position:absolute; bottom:20px; left:20px; background:rgba(0,170,255,0.25); border:1px solid #00aaff; color:#fff; text-decoration:none; padding:10px 18px; border-radius:12px; font-size:13px; font-weight:700; backdrop-filter:blur(10px); z-index:10001; transition:0.2s; display:flex; align-items:center; gap:6px;">
             Visitar sitio ↗
           </a>
 
@@ -119,12 +126,13 @@
         container.appendChild(overlay);
 
         const videoElem = overlay.querySelector('#animeoffis-ad-video');
+        const fallbackCard = overlay.querySelector('#animeoffis-ad-fallback');
         const skipBtn = overlay.querySelector('#animeoffis-skip-btn');
         const timerSpan = overlay.querySelector('#animeoffis-ad-timer');
 
         let countdown = adData.skipDelay;
 
-        // Limpiar el overlay y continuar con el capítulo
+        // Función para limpiar el overlay y entregar el control al capítulo
         const finalizarAnuncio = () => {
           clearInterval(timerInterval);
           if (container.contains(overlay)) {
@@ -134,7 +142,7 @@
           resolve();
         };
 
-        // Temporizador de Omitir
+        // Temporizador independiente que corre siempre
         const timerInterval = setInterval(() => {
           countdown--;
           if (timerSpan) timerSpan.innerText = countdown;
@@ -145,23 +153,30 @@
             skipBtn.style.cursor = 'pointer';
             skipBtn.style.color = '#ffffff';
             skipBtn.style.borderColor = '#ff00aa';
-            skipBtn.style.background = 'rgba(255,0,170,0.25)';
+            skipBtn.style.background = 'rgba(255,0,170,0.3)';
             skipBtn.innerHTML = 'Omitir Anuncio ➔';
           }
         }, 1000);
 
-        // Eventos
+        // Activa la tarjeta visual si el video falla
+        const activarFallbackVisual = () => {
+          if (videoElem) videoElem.style.display = 'none';
+          if (fallbackCard) fallbackCard.style.display = 'block';
+        };
+
+        // Escuchadores de eventos para el video
+        videoElem.onerror = activarFallbackVisual;
+        
+        videoElem.play().catch(() => {
+          // Si el navegador bloquea el Autoplay del anuncio
+          activarFallbackVisual();
+        });
+
         skipBtn.onclick = () => {
           if (!skipBtn.disabled) finalizarAnuncio();
         };
 
         videoElem.onended = finalizarAnuncio;
-
-        // Respaldo de seguridad si el video de publicidad falla en cargar
-        videoElem.onerror = () => {
-          console.warn("AnimeOffisSDK: Error al reproducir el video publicitario, saltando...");
-          finalizarAnuncio();
-        };
       });
     }
   };
