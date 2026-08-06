@@ -1,9 +1,9 @@
-// Anime Offis Ads SDK - Edición Privada (Uso Exclusivo)
+// Anime Offis Ads SDK - Edición Privada (Corregida y Optimizada)
 (function(window, document) {
     const CONFIG = {
         projectId: "ads-offis",
         databaseURL: "https://ads-offis-default-rtdb.firebaseio.com",
-        listaAds: "https://anime-offisvd.pages.dev/ads/lista.json" // Tu CDN de anuncios
+        listaAds: "https://anime-offisvd.pages.dev/ads/lista.json"
     };
 
     // SISTEMA DE SEGUIMIENTO INTERNO
@@ -32,16 +32,40 @@
     window.AnimeOffisSDK = {
         esAnuncio: false,
 
-        // Obtener anuncio filtrado por formato
+        // Obtener anuncio filtrado de forma estricta por formato y tipo de archivo
         async _obtenerAnuncio(formatoDeseado = null) {
             try {
-                const response = await fetch(CONFIG.listaAds);
+                // Anti-Caché: Agrega Timestamp para obtener siempre datos frescos de lista.json
+                const urlAntiCache = `${CONFIG.listaAds}?_nc=${Date.now()}`;
+                const response = await fetch(urlAntiCache);
                 const anuncios = await response.json();
                 
-                let filtrados = anuncios;
-                if (formatoDeseado) {
-                    filtrados = anuncios.filter(a => a.formato === formatoDeseado || a.tipo === formatoDeseado);
-                    if (filtrados.length === 0) filtrados = anuncios; // Fallback
+                let filtrados = [];
+
+                if (formatoDeseado === 'video') {
+                    // Filtrar SOLO archivos de video (.mp4)
+                    filtrados = anuncios.filter(a => 
+                        (a.formato === 'video' || a.tipo === 'video') || 
+                        (a.url && a.url.toLowerCase().endsWith('.mp4'))
+                    );
+                } else {
+                    // Para Banners, Overlay y Popups: Filtrar SOLO IMÁGENES (excluir .mp4)
+                    filtrados = anuncios.filter(a => {
+                        const esImagen = a.url && !a.url.toLowerCase().endsWith('.mp4');
+                        const coincideFormato = (a.formato === formatoDeseado || a.tipo === formatoDeseado);
+                        return esImagen && coincideFormato;
+                    });
+
+                    // Fallback: Si no hay del formato exacto, usar cualquier IMAGEN disponible
+                    if (filtrados.length === 0) {
+                        filtrados = anuncios.filter(a => a.url && !a.url.toLowerCase().endsWith('.mp4'));
+                    }
+                }
+
+                // Si de plano no hay elementos compatibles
+                if (filtrados.length === 0) {
+                    console.warn(`[Anime Offis SDK] No hay anuncios disponibles para: ${formatoDeseado}`);
+                    return null;
                 }
                 
                 const elegido = filtrados[Math.floor(Math.random() * filtrados.length)];
@@ -101,10 +125,8 @@
                 visitBtn.remove();
                 skipBtn.remove();
 
-                // Registra la vista del anuncio
                 Tracker.registrarVista(elegido.id);
 
-                // Reanudar el video original
                 videoElement.src = sourceOriginal;
                 videoElement.load();
                 videoElement.play();
