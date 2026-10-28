@@ -29,10 +29,10 @@
       },
       {
         id: 'ad_preroll_3',
-        title: 'Servidor de Discord Partner',
-        description: 'Únete a la comunidad de anime más activa del momento.',
-        videoUrl: 'https://anime-offisvd.pages.dev/ads/anuncio3.mp4',
-        targetUrl: 'https://discord.gg/animeoffis',
+        title: 'Look at Serie Estreno Anime Offis',
+        description: 'Ver la serie en estreno de Look at visita su página web',
+        videoUrl: 'https://media.animeoffis.com/lookst/af1.mp4',
+        targetUrl: 'https://lookat.animeoffis.com',
         skipDelay: 6
       }
     ]
