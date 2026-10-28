@@ -24,8 +24,8 @@
         title: 'el manga más interesante manga plus',
         description: 'Lee el mangas mas interesante en manga plus meta llegar al top 1 ver el manga en el link',
         videoUrl: 'https://anime-offisvd.pages.dev/ads/anuncio2.mp4',
-        targetUrl: 'https://mangastore.com',
-        skipDelay: 5
+        targetUrl: 'https://mangaplus-creators.jp/episodes/ti2610020527270027382967',
+        skipDelay: 8
       },
       {
         id: 'ad_preroll_3',
