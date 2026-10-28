@@ -21,8 +21,8 @@
       },
       {
         id: 'ad_preroll_2',
-        title: 'Manga Store Oficial',
-        description: 'Consigue tus tomos favoritos con envíos a todo el país.',
+        title: 'el manga más interesante manga plus',
+        description: 'Lee el mangas mas interesante en manga plus meta llegar al top 1 ver el manga en el link',
         videoUrl: 'https://anime-offisvd.pages.dev/ads/anuncio2.mp4',
         targetUrl: 'https://mangastore.com',
         skipDelay: 5
@@ -31,7 +31,7 @@
         id: 'ad_preroll_3',
         title: 'Look at Serie Estreno Anime Offis',
         description: 'Ver la serie en estreno de Look at visita su página web',
-        videoUrl: 'https://media.animeoffis.com/lookst/af1.mp4',
+        videoUrl: 'https://media.animeoffis.com/lookat_LAT/af1.mp4',
         targetUrl: 'https://lookat.animeoffis.com',
         skipDelay: 6
       }
