@@ -15,7 +15,7 @@
         id: 'ad_preroll_1',
         title: 'Patrocinado por Anime Offis',
         description: 'Descubre el catálogo y las novedades de la comunidad.',
-        videoUrl: 'https://anime-offisvd.pages.dev/ads/anuncio1.mp4',
+        videoUrl: 'https://anime-offisvd.pages.dev/ads/anuncio2.mp4',
         targetUrl: 'https://alianza.animeoffis.com',
         skipDelay: 7
       },
